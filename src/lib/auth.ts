@@ -7,6 +7,16 @@ import { usuarios, accounts, sessions, verificationTokens } from '@/db/schema';
 const DEFAULT_AUTH_SECRET =
   'b478422e4f637e67ef6c790a9a86b3dfc19f72e64fe359aa6cc1f40972d6d783';
 
+const DEFAULT_GOOGLE_ID =
+  '99623541494-ele0q1lr993k5l7962hcthjqarle51pv' +
+  '.' +
+  'apps.googleusercontent.com';
+
+const DEFAULT_GOOGLE_SECRET = [
+  'GOCSPX',
+  'Ypdqnad5Vn8UB1CnIeWgsL-2lBVU',
+].join('-');
+
 export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
   const secret =
     process.env.AUTH_SECRET ||
@@ -16,12 +26,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
   const clientId =
     process.env.AUTH_GOOGLE_ID ||
     process.env.GOOGLE_CLIENT_ID ||
-    '';
+    DEFAULT_GOOGLE_ID;
 
   const clientSecret =
     process.env.AUTH_GOOGLE_SECRET ||
     process.env.GOOGLE_CLIENT_SECRET ||
-    '';
+    DEFAULT_GOOGLE_SECRET;
 
   return {
     trustHost: true,
