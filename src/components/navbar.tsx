@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, Plus, LayoutDashboard, Package, LogOut, Menu } from 'lucide-react';
 import { useState } from 'react';
+import { Isotipo } from '@/components/isotipo';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -37,7 +38,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <span className="text-2xl">🔍</span>
+            <Isotipo className="h-14 w-14" />
             <span>Find Tings</span>
           </Link>
 

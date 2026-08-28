@@ -3,13 +3,16 @@
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Isotipo } from '@/components/isotipo';
 
 export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="text-4xl mb-4">🔍</div>
+          <div className="mb-4 flex justify-center">
+            <Isotipo className="h-36 w-36" />
+          </div>
           <CardTitle className="text-2xl">Find Tings</CardTitle>
           <CardDescription>
             Inicia sesión para reportar y reclamar objetos perdidos
