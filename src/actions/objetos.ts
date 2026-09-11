@@ -168,13 +168,26 @@ export async function obtenerObjeto(id: string) {
           },
         },
       },
+      entregador: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
   });
 
   return objeto ?? null;
 }
 
-export async function marcarRecogido(id: string) {
+export interface DatosEntrega {
+  nombre: string;
+  documento?: string;
+  notas?: string;
+}
+
+export async function marcarRecogido(id: string, datosEntrega: DatosEntrega) {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('No autorizado');
@@ -196,10 +209,20 @@ export async function marcarRecogido(id: string) {
     throw new Error('No tienes permisos para realizar esta acción');
   }
 
+  const nombreReceptor = datosEntrega?.nombre?.trim();
+  if (!nombreReceptor) {
+    throw new Error('El nombre de la persona a quien se le entrega el objeto es obligatorio');
+  }
+
   const [objetoActualizado] = await db
     .update(schema.objetos)
     .set({
       estado: 'reclamado',
+      entregadoANombre: nombreReceptor,
+      entregadoADocumento: datosEntrega.documento?.trim() || null,
+      entregadoNotas: datosEntrega.notas?.trim() || null,
+      fechaEntrega: new Date(),
+      entregadoPor: session.user.id,
       updatedAt: new Date(),
     })
     .where(eq(schema.objetos.id, id))
@@ -207,8 +230,49 @@ export async function marcarRecogido(id: string) {
 
   revalidatePath('/objetos');
   revalidatePath(`/objetos/${id}`);
+  revalidatePath('/mis-reportes');
+  revalidatePath('/admin');
 
   return objetoActualizado;
+}
+
+export async function obtenerObjetosEntregados() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('No autorizado');
+  }
+
+  const rol = (session.user as { rol?: string })?.rol;
+  if (rol !== 'admin') {
+    throw new Error('No tienes permisos de administrador');
+  }
+
+  const entregados = await db.query.objetos.findMany({
+    where: eq(schema.objetos.estado, 'reclamado'),
+    orderBy: [desc(schema.objetos.fechaEntrega), desc(schema.objetos.updatedAt)],
+    with: {
+      reportadoPor: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      entregador: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      fotos: {
+        limit: 1,
+        orderBy: (fotos, { asc }) => [asc(fotos.orden)],
+      },
+    },
+  });
+
+  return entregados;
 }
 
 export async function obtenerMisReportes() {

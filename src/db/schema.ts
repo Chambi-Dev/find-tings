@@ -61,6 +61,11 @@ export const objetos = pgTable('objetos', {
   reportadoPor: uuid('reportado_por')
     .references(() => usuarios.id)
     .notNull(),
+  entregadoANombre: varchar('entregado_a_nombre', { length: 255 }),
+  entregadoADocumento: varchar('entregado_a_documento', { length: 100 }),
+  entregadoNotas: text('entregado_notas'),
+  fechaEntrega: timestamp('fecha_entrega', { mode: 'date' }),
+  entregadoPor: uuid('entregado_por').references(() => usuarios.id),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });
@@ -141,7 +146,8 @@ export const verificationTokens = pgTable(
 
 // Relations
 export const usuariosRelations = relations(usuarios, ({ many }) => ({
-  objetos: many(objetos),
+  objetos: many(objetos, { relationName: 'reportador' }),
+  objetosEntregados: many(objetos, { relationName: 'entregador' }),
   reclamos: many(reclamos),
   accounts: many(accounts),
   sessions: many(sessions),
@@ -151,6 +157,12 @@ export const objetosRelations = relations(objetos, ({ one, many }) => ({
   reportadoPor: one(usuarios, {
     fields: [objetos.reportadoPor],
     references: [usuarios.id],
+    relationName: 'reportador',
+  }),
+  entregador: one(usuarios, {
+    fields: [objetos.entregadoPor],
+    references: [usuarios.id],
+    relationName: 'entregador',
   }),
   fotos: many(fotos),
   reclamos: many(reclamos),

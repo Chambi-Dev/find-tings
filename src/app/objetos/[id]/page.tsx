@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ReclamarDialog } from '@/components/reclamar-dialog';
+import { EntregarDialog } from '@/components/entregar-dialog';
 import {
   MapPin,
   Calendar,
@@ -17,6 +18,7 @@ import {
   MessageCircle,
   Phone,
   ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react';
 import { getCategoryInfo } from '@/lib/categories';
 import { formatPhoneDisplay, getWhatsappLink } from '@/lib/phone';
@@ -180,6 +182,31 @@ export default async function ObjetoDetailPage({
             </span>
           </div>
 
+          {objeto.estado === 'reclamado' && (
+            <div className="p-4 rounded-xl border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20 space-y-1.5">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold text-sm">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>Objeto Entregado a su Dueño</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Entregado a <span className="font-semibold text-foreground">{objeto.entregadoANombre || 'su propietario'}</span>
+                {objeto.entregadoADocumento && ` (Doc: ${objeto.entregadoADocumento})`}
+                {objeto.fechaEntrega &&
+                  ` el ${new Date(objeto.fechaEntrega).toLocaleDateString('es-MX', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}`}
+                .
+              </p>
+              {objeto.entregadoNotas && (
+                <p className="text-xs text-muted-foreground italic bg-background/80 p-2 rounded border mt-1">
+                  &ldquo;{objeto.entregadoNotas}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
+
           {canClaim && (
             <>
               <Separator />
@@ -188,6 +215,30 @@ export default async function ObjetoDetailPage({
               </div>
             </>
           )}
+
+          {(session?.user?.id === objeto.reportadoPor?.id ||
+            (session?.user as { rol?: string })?.rol === 'admin') &&
+            objeto.estado === 'disponible' && (
+              <>
+                <Separator />
+                <div className="pt-2">
+                  <EntregarDialog
+                    objetoId={objeto.id}
+                    objetoTitulo={objeto.titulo}
+                    buttonSize="lg"
+                    buttonVariant="default"
+                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
+                    reclamantes={objeto.reclamos
+                      .filter((r) => r.usuario)
+                      .map((r) => ({
+                        id: r.usuario!.id,
+                        name: r.usuario!.name,
+                        email: r.usuario!.email,
+                      }))}
+                  />
+                </div>
+              </>
+            )}
         </div>
 
         {/* Sidebar */}

@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { EntregarDialog } from '@/components/entregar-dialog';
+
 interface ReclamoItem {
   id: string;
   estado: string;
@@ -54,6 +56,10 @@ interface MisReportesItemProps {
     telefonoContacto: string | null;
     fechaEncontrado: Date;
     estado: string;
+    entregadoANombre?: string | null;
+    entregadoADocumento?: string | null;
+    entregadoNotas?: string | null;
+    fechaEntrega?: Date | null;
     createdAt: Date;
     fotos: { id: string; url: string; orden: number }[];
     reclamos: ReclamoItem[];
@@ -63,21 +69,9 @@ interface MisReportesItemProps {
 
 export function MisReportesItem({ objeto }: MisReportesItemProps) {
   const [showClaims, setShowClaims] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const primeraFoto = objeto.fotos?.[0];
   const catInfo = getCategoryInfo(objeto.categoria);
   const CatIcon = catInfo.icon;
-
-  function handleMarcarEntregado() {
-    startTransition(async () => {
-      try {
-        await marcarRecogido(objeto.id);
-        toast.success('¡Objeto marcado como entregado/reclamado!');
-      } catch (error) {
-        toast.error('Error al actualizar el estado');
-      }
-    });
-  }
 
   return (
     <Card className="overflow-hidden border shadow-sm">
@@ -178,21 +172,31 @@ export function MisReportesItem({ objeto }: MisReportesItemProps) {
               {showClaims ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
 
-            {objeto.estado === 'disponible' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleMarcarEntregado}
-                disabled={isPending}
-                className="text-xs"
-              >
-                {isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                ) : (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mr-1" />
-                )}
-                Marcar como entregado a su dueño
-              </Button>
+            {objeto.estado === 'disponible' ? (
+              <EntregarDialog
+                objetoId={objeto.id}
+                objetoTitulo={objeto.titulo}
+                reclamantes={objeto.reclamos
+                  .filter((r) => r.usuario)
+                  .map((r) => ({
+                    id: r.usuario!.id,
+                    name: r.usuario!.name,
+                    email: r.usuario!.email,
+                    telefono: r.usuario!.telefono,
+                  }))}
+              />
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400 font-medium bg-green-50 dark:bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-200 dark:border-green-900">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>
+                  Entregado a {objeto.entregadoANombre || 'su dueño'}
+                  {objeto.fechaEntrega &&
+                    ` el ${new Date(objeto.fechaEntrega).toLocaleDateString('es-MX', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}`}
+                </span>
+              </div>
             )}
           </div>
         </div>
