@@ -144,7 +144,7 @@ export default async function ObjetoDetailPage({
               <div className="flex items-start gap-2.5 text-sm text-amber-700 dark:text-amber-300">
                 <Building2 className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-medium">Entregado en Prefectura / Portería</p>
+                  <p className="font-medium">Coordinación / Área de Limpieza</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Este objeto está resguardado en la oficina. Si es tuyo, envía tu reclamo y acércate con tu identificación escolar.
                   </p>

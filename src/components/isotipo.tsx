@@ -1,10 +1,10 @@
 import type { SVGProps } from 'react';
 
-export function Isotipo(props: SVGProps<SVGSVGElement>) {
+export function Isotipo({ fill = '#0500A8', ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg
       viewBox="0 0 406 288"
-      fill="#000000"
+      fill={fill}
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >

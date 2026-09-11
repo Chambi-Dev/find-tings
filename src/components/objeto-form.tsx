@@ -163,7 +163,7 @@ export function ObjetoForm() {
             />
             <div>
               <p className="font-medium text-sm text-foreground">
-                En Prefectura / Portería
+                Coordinación / Área de Limpieza
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Lo entregué para que el dueño lo recoja con su carnet.

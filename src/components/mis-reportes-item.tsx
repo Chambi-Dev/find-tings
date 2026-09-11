@@ -145,7 +145,7 @@ export function MisReportesItem({ objeto }: MisReportesItemProps) {
               ) : (
                 <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
                   <Building2 className="h-3.5 w-3.5" />
-                  Entregado en Prefectura
+                  Coordinación / Área de Limpieza
                 </span>
               )}
               {objeto.ubicacion && (
