@@ -18,19 +18,39 @@ const DEFAULT_GOOGLE_SECRET = [
   'Ypdqnad5Vn8UB1CnIeWgsL-2lBVU',
 ].join('-');
 
-const DEFAULT_ADMIN_EMAILS = 'chambiadam20@gmail.com';
-
 /**
- * Limpia y procesa la lista de correos administradores, eliminando comillas dobles,
- * comillas simples, espacios y saltos de línea para evitar fallos de coincidencia.
+ * Obtiene la lista de correos administradores inspeccionando todas las fuentes
+ * posibles en Cloudflare Workers y Next.js:
+ * 1. process.env.ADMIN_EMAILS
+ * 2. process.env.NEXT_PUBLIC_ADMIN_EMAILS
+ * 3. globalThis.ADMIN_EMAILS
+ * 4. globalThis.env.ADMIN_EMAILS (Cloudflare Worker runtime bindings)
+ * 5. req.env.ADMIN_EMAILS (Cloudflare Request bindings)
  */
-function getAdminEmailsList(): string[] {
-  const raw = process.env.ADMIN_EMAILS || DEFAULT_ADMIN_EMAILS;
-  return raw
-    .replace(/["'\r\n]/g, '') // Elimina comillas accidentales de Cloudflare o .env
+function getAdminEmailsList(req?: unknown): string[] {
+  const g = globalThis as Record<string, unknown>;
+  const reqObj = req as Record<string, unknown> | undefined;
+  const cloudflareEnv =
+    (reqObj?.env as Record<string, unknown> | undefined) ||
+    (g?.env as Record<string, unknown> | undefined) ||
+    (g?.__env__ as Record<string, unknown> | undefined);
+
+  const raw =
+    process.env.ADMIN_EMAILS ||
+    process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
+    (g?.ADMIN_EMAILS as string | undefined) ||
+    (g?.NEXT_PUBLIC_ADMIN_EMAILS as string | undefined) ||
+    (cloudflareEnv?.ADMIN_EMAILS as string | undefined) ||
+    (cloudflareEnv?.NEXT_PUBLIC_ADMIN_EMAILS as string | undefined) ||
+    '';
+
+  const cleaned = raw
+    .replace(/["'\r\n]/g, '') // Elimina comillas dobles, simples y saltos de línea
     .split(',')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
+
+  return cleaned;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
@@ -76,20 +96,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
           token.rol = user.rol;
         }
 
-        const adminEmails = getAdminEmailsList();
+        const adminEmails = getAdminEmailsList(req);
         const userEmail = ((token.email as string) || '').toLowerCase().trim();
 
-        // Si el correo está en ADMIN_EMAILS, asegurar rol admin en token y DB
-        if (userEmail && adminEmails.includes(userEmail)) {
+        const isConfiguredAdmin = !!userEmail && adminEmails.includes(userEmail);
+        const isAdmin = token.rol === 'admin' || isConfiguredAdmin;
+
+        if (isAdmin) {
           token.rol = 'admin';
 
-          // Auto-promover en la base de datos Neon para persistencia permanente
-          if (token.id) {
+          // Si el correo está en la lista de administradores, asegurar que su rol
+          // en la base de datos Neon también sea actualizado de 'alumno' a 'admin'
+          if (userEmail) {
             db.update(usuarios)
               .set({ rol: 'admin' })
-              .where(eq(usuarios.id, token.id as string))
+              .where(eq(usuarios.email, userEmail))
               .catch((err) =>
-                console.error('Error auto-promoviendo rol admin en DB:', err)
+                console.error('[AUTH] Error actualizando rol admin en DB:', err)
               );
           }
         }
@@ -103,7 +126,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
             session.user.email = token.email as string;
           }
 
-          const adminEmails = getAdminEmailsList();
+          const adminEmails = getAdminEmailsList(req);
           const userEmail = (
             session.user.email ||
             (token.email as string) ||
@@ -112,9 +135,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
             .toLowerCase()
             .trim();
 
-          const isAdmin =
-            token.rol === 'admin' ||
-            (userEmail && adminEmails.includes(userEmail));
+          const isConfiguredAdmin = !!userEmail && adminEmails.includes(userEmail);
+          const isAdmin = token.rol === 'admin' || isConfiguredAdmin;
 
           // @ts-ignore
           session.user.rol = isAdmin ? 'admin' : (token.rol || 'alumno');
