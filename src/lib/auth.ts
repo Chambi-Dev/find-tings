@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { usuarios, accounts, sessions, verificationTokens } from '@/db/schema';
 
@@ -16,6 +17,21 @@ const DEFAULT_GOOGLE_SECRET = [
   'GOCSPX',
   'Ypdqnad5Vn8UB1CnIeWgsL-2lBVU',
 ].join('-');
+
+const DEFAULT_ADMIN_EMAILS = 'chambiadam20@gmail.com';
+
+/**
+ * Limpia y procesa la lista de correos administradores, eliminando comillas dobles,
+ * comillas simples, espacios y saltos de línea para evitar fallos de coincidencia.
+ */
+function getAdminEmailsList(): string[] {
+  const raw = process.env.ADMIN_EMAILS || DEFAULT_ADMIN_EMAILS;
+  return raw
+    .replace(/["'\r\n]/g, '') // Elimina comillas accidentales de Cloudflare o .env
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
   const secret =
@@ -55,23 +71,50 @@ export const { handlers, auth, signIn, signOut } = NextAuth((req) => {
       async jwt({ token, user }) {
         if (user) {
           token.id = user.id;
+          if (user.email) token.email = user.email;
           // @ts-ignore
           token.rol = user.rol;
         }
+
+        const adminEmails = getAdminEmailsList();
+        const userEmail = ((token.email as string) || '').toLowerCase().trim();
+
+        // Si el correo está en ADMIN_EMAILS, asegurar rol admin en token y DB
+        if (userEmail && adminEmails.includes(userEmail)) {
+          token.rol = 'admin';
+
+          // Auto-promover en la base de datos Neon para persistencia permanente
+          if (token.id) {
+            db.update(usuarios)
+              .set({ rol: 'admin' })
+              .where(eq(usuarios.id, token.id as string))
+              .catch((err) =>
+                console.error('Error auto-promoviendo rol admin en DB:', err)
+              );
+          }
+        }
+
         return token;
       },
       async session({ session, token }) {
         if (session.user && token) {
           session.user.id = (token.id as string) || (token.sub as string);
+          if (token.email) {
+            session.user.email = token.email as string;
+          }
 
-          const adminEmails = (process.env.ADMIN_EMAILS || 'chambiadam20@gmail.com')
-            .split(',')
-            .map((e) => e.trim().toLowerCase());
+          const adminEmails = getAdminEmailsList();
+          const userEmail = (
+            session.user.email ||
+            (token.email as string) ||
+            ''
+          )
+            .toLowerCase()
+            .trim();
 
           const isAdmin =
             token.rol === 'admin' ||
-            (session.user.email &&
-              adminEmails.includes(session.user.email.toLowerCase()));
+            (userEmail && adminEmails.includes(userEmail));
 
           // @ts-ignore
           session.user.rol = isAdmin ? 'admin' : (token.rol || 'alumno');
